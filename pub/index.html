@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html ng-app="workerbee">
+<head>
+
+<title>Beeminder + Clozemaster Integration</title>
+<meta name="description" content="Made with Glitch">
+<link id="favicon" rel="icon" href="https://glitch.com/favicon-app.ico" 
+      type="image/x-icon">
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" 
+  href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" 
+  integrity=
+        "sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+  crossorigin="anonymous">
+
+<!-- Compiled and minified jQuery, Bootstrap, AngularJS -->
+<script src="https://code.jquery.com/jquery-3.1.1.min.js" 
+        integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" 
+        crossorigin="anonymous"></script>
+<script 
+  src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" 
+  integrity=
+        "sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+  crossorigin="anonymous"></script>
+<script 
+  src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.4/angular.min.js">
+</script>
+<link rel="stylesheet" href="/style.css">
+
+</head>
+<body>
+
+<div class="col-xs-12 col-lg-10 col-lg-offset-1" ng-controller="goalConnect">
+<header class="hidden" ng-class="currentStage ? 'visible' : 'hidden' ">
+  <h1 style="text-align: center;">
+    Beeminder + Clozemaster Integration
+    <a href="/logout" class="btn btn-default" 
+       style="position: absolute; right: 15px;" ng-if="currentStage != 'initialScreen'">Log out</a>
+  </h1>
+</header>
+<div style="margin-bottom: 40px;">&nbsp;</div>
+<main class="hidden" ng-class="currentStage ? 'visible' : 'hidden' ">
+  
+  <!-- Initial welcome screen -->
+  <div class="col-xs-12 col-sm-8 col-sm-offset-2 col-md-6 col-md-offset-3" 
+       ng-if="currentStage == 'initialScreen'" style="text-align: center;">
+    <p>
+      Beemind your Clozemaster progress!
+      Tell us your 
+      <a href="https://www.clozemaster.com">Clozemaster</a>
+      username and a 
+      <a href="https://www.beeminder.com">Beeminder</a>
+      goal and we'll automatically update your Beeminder 
+      graph with your Clozemaster progress.
+    </p>
+    <p>
+      <strong>Instructions:</strong>
+      Create a standard Do More goal on Beeminder.
+      (You'll create it as a manual goal even though it will be automatic.)
+      The units should be points (i.e., Clozemaster score) and you can choose 
+      the number of points per week you want to force yourself to earn.
+      Then come back here and select that Beeminder goal when prompted.
+    </p>
+    <div style="margin-bottom: 40px;">&nbsp;</div>
+    <p style="text-align: center">
+      <a class="btn btn-primary" href=
+"https://www.beeminder.com/apps/authorize?client_id=33zmev7plbij6ecypakadrkmo&redirect_uri=https://clozeminder.glitch.me/connect&response_type=token">
+        Log in with your Beeminder account
+      </a>
+    </p>
+    <p class="hidden" ng-class="initialScreenError ? 'error' : 'hidden'">
+      {{initialScreenError.error_description}}
+    </p>
+  </div>
+  
+  <!-- Screen with the list of configured goals -->
+  <div ng-if="currentStage == 'goalsList'">
+    <table class="table table-striped">
+      <thead>
+        <th>Beeminder goal</th>
+        <th>Data source</th>
+        <th>Parameters</th>
+        <th>Last updated</th>
+        <th>Last value</th>
+        <th>&nbsp;</th>
+      </thead>
+      <tbody>
+        <tr ng-repeat="goal in goals">
+          <td>{{ goal.goal }}</td>
+          <td>{{ connections[goal.linktype]['name'] }}</td>
+          <td>{{ goal.params }}</td>
+          <td>{{ goal.last_updated | date: 'd MMM yyyy hh:mm' }}</td>
+          <td>{{ goal.score }}</td>
+          <td><a href="" ng-click="deleteLink(goal.id)">Delete</a></td>
+        </tr>
+        <tr ng-if="goals.length == 0">
+          <td colspan="6" style="text-align: center;">
+            <em>No Clozemaster goals</em>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top: 20px;">&nbsp;</div>
+    <div class="col-xs-12" style="text-align: center;">
+      <button class="btn btn-primary" ng-click="addConnection('Clozemaster')">
+        New Clozemaster goal
+      </button>
+    </div>
+  </div>        
+  
+  <!-- Screen to set up Clozemaster connection -->
+  <div ng-if="currentStage == 'newClozemaster'" 
+       class="col-xs-12 col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3" 
+       style="text-align: center;">
+    <h3>New Clozemaster Goal</h3>
+    <div class="form-group" ng-if="!beeminderGoals">
+      <p class="error">
+        No Beeminder goals to connect! Create one first!
+      </p>
+    </div>
+    <div class="form-group" ng-if="beeminderGoals">
+      <label for="goal">Beeminder goal to update</label>
+      <select class="form-control" ng-model="newConnection.goal">
+        <option ng-repeat="goal in beeminderGoals" 
+                value="{{goal}}">{{ goal }}</option>
+      </select>
+      <p class="error" ng-if="targetError">{{ targetError }}</p>
+    </div>
+    <div class="form-group" ng-if="beeminderGoals">
+      <label for="link">Clozemaster username</label>
+        <input class="form-control" style="width: 100%; display: inline;" 
+               type="text" ng-model="newConnection.params.username"/>
+      <p class="error" ng-if="sourceError">{{ sourceError }}</p>
+    </div>
+    <div class="form-group" ng-if="newConnection.score != null">
+      <label for="score">Current Score in Clozemaster</label>
+      <input class="form-control" disabled="disabled" type="text"  
+             value="{{ newConnection.score }}" />
+    </div>
+    <div class="form-group" ng-if="newConnection.startValue != null">
+      <label for="start_value">Starting Score (currently in Beeminder)</label>
+      <input class="form-control" type="text" 
+             value="{{newConnection.startValue}}" />
+    </div>
+    <button class="btn btn-success" id="actionButton" 
+            ng-click="submitConnection('clozemaster')">{{ action }}</button>
+    <button class="btn btn-default" style="float: right;" 
+            ng-click="cancelConnection()">Cancel</button>
+  </div>        
+    
+</main>
+</div>
+
+<script src="https://code.jquery.com/jquery-2.2.1.min.js"
+        integrity="sha256-gvQgAFzTH6trSrAWoH1iPo9Xc96QxSZ3feW6kem+O00="
+        crossorigin="anonymous"></script>
+<script src="/client.js"></script>
+  
+</body>
+</html>

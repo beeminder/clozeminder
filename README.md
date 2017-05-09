@@ -1,2 +1,5 @@
-# clozeminder
-Clozemaster + Beeminder integration
+# Beeminder + Clozemaster Integration
+
+## By Sergii Kalinchuk and Daniel Reeves
+
+
