@@ -1,0 +1,18 @@
+
+.error {
+  color: red;
+  font-size: 90%;
+}
+
+.form-group {
+  margin-top: 30px;
+}
+
+h2 {
+  border-bottom: 1px solid #777;
+  padding-bottom: 5px;
+}
+
+.visible {
+  display: inherit !important;
+}
